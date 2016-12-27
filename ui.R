@@ -1,6 +1,5 @@
 library(shinydashboard)
 library(shiny)
-library(plotly)
 library(DT)
 library(dygraphs)
 
@@ -10,6 +9,9 @@ ui <- dashboardPage(
   ,dashboardSidebar(
     sidebarMenu(
        menuItem("Portfolio", tabName = "Portfolio", icon = icon("dashboard"))
+       ,menuItem("Sale Analysis", tabName = "SaleAnalysis", icon = icon("line-chart"))
+       ,menuItem("Stocks & Payments", tabName = "Stocks_Payments", icon = icon("inr"))
+       ,menuItem("Expense Analysis", tabName = "ExpenseAnalysis", icon = icon("pie-chart"))
     )
     ,dateRangeInput("daterange", "Date Range:", start = '2016-09-15', min = '2016-09-15')
   )
@@ -88,6 +90,12 @@ ui <- dashboardPage(
             , color = "red"
             , width = 3
           )
+          ,valueBox(
+            uiOutput("StockWorth")
+            , "Stock Transacted Worth"
+            , color = "purple"
+            , width = 3
+          )
         )
       ,fluidRow(
         box(
@@ -127,6 +135,87 @@ ui <- dashboardPage(
           ,status = "primary"
           ,collapsible = TRUE
          )
+        )
+      )
+      ,tabItem(
+        tabName = "SaleAnalysis"
+        ,fluidRow(
+          box(
+          uiOutput('ItemList')
+          ,status = "primary"
+          ,collapsible = TRUE
+          ,width = 2
+          )
+        )
+          ,fluidRow(
+            tabBox(
+              tabPanel("Product View"
+                       , dataTableOutput("SalesTable")
+                       , width = 12
+                       , status = "primary"
+                       
+              )
+              ,tabPanel("Time View"
+                        # , dygraphOutput("Average_Trends_Plot")
+                        , width = 12
+                        , status = "primary"
+              )
+              ,width = 12
+            )
+        )
+      )
+      ,tabItem(
+        tabName = "Stocks_Payments"
+        ,fluidRow(
+          box(
+            uiOutput('DealerList')
+            ,status = "primary"
+            ,collapsible = TRUE
+            ,width = 2
+          )
+        )
+        ,fluidRow(
+          tabBox(
+            tabPanel("Stock View"
+                     , dataTableOutput("StockTable")
+                     , width = 12
+                     , status = "primary"
+                     
+            )
+            ,tabPanel("Payment View"
+                      , dataTableOutput("PaymentTable")
+                      , width = 12
+                      , status = "primary"
+            )
+            ,width = 12
+          )
+        )
+      )
+      ,tabItem(
+        tabName = "ExpenseAnalysis"
+        ,fluidRow(
+          box(
+            uiOutput('Expense_SourceList')
+            ,status = "primary"
+            ,collapsible = TRUE
+            ,width = 2
+          )
+        )
+        ,fluidRow(
+          tabBox(
+            tabPanel("Overall View"
+                     , dataTableOutput("ExpensesTable")
+                     , width = 12
+                     , status = "primary"
+                     
+            )
+            ,tabPanel("Time View"
+                      # , dygraphOutput("Average_Trends_Plot")
+                      , width = 12
+                      , status = "primary"
+            )
+            ,width = 12
+          )
         )
       )
     )
