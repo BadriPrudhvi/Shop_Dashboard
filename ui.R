@@ -177,12 +177,24 @@ ui <- dashboardPage(
         ,fluidRow(
           tabBox(
             tabPanel("Stock View"
+                     ,valueBox(
+                       uiOutput("TotStock")
+                       , "Total Stock"
+                       , color = "blue"
+                       , width = 3
+                     )
                      , dataTableOutput("StockTable")
                      , width = 12
                      , status = "primary"
                      
             )
             ,tabPanel("Payment View"
+                      ,valueBox(
+                        uiOutput("TotPayment")
+                        , "Total Payment"
+                        , color = "orange"
+                        , width = 3
+                      )
                       , dataTableOutput("PaymentTable")
                       , width = 12
                       , status = "primary"
@@ -204,6 +216,12 @@ ui <- dashboardPage(
         ,fluidRow(
           tabBox(
             tabPanel("Overall View"
+                     ,valueBox(
+                       uiOutput("TotExpense")
+                       , "Total Expense"
+                       , color = "red"
+                       , width = 3
+                     )
                      , dataTableOutput("ExpensesTable")
                      , width = 12
                      , status = "primary"

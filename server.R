@@ -267,6 +267,10 @@ Stock_Summary <- reactive({
     )
 })
 
+output$TotStock <- renderText({
+  paste("₹",format(round(sum(Stock_Summary()$Total_Stock_Price,na.rm=T)), nsmall=0, big.mark=","))
+})
+
 output$StockTable <- renderDataTable({
   datatable(
     Stock_Summary() %>% arrange(desc(Total_Stock_Price))
@@ -315,6 +319,10 @@ Payment_Summary <- reactive({
                Avg_Payment = round(mean(Payment_Amount,na.rm=T),2),
                Payment_Percent = sum(Payment_Amount,na.rm=T)/mean(Entire_Payment,na.rm=T)
     )
+})
+
+output$TotPayment <- renderText({
+  paste("₹",format(round(sum(Payment_Summary()$Total_Payment,na.rm=T)), nsmall=0, big.mark=","))
 })
 
 output$PaymentTable <- renderDataTable({
@@ -372,6 +380,10 @@ Expenses_Summary <- reactive({
                Avg_Expense = round(mean(Expense_Amount,na.rm=T),2),
                Expense_Percent = sum(Expense_Amount,na.rm=T)/mean(Entire_Expense,na.rm=T)
     )
+})
+
+output$TotExpense <- renderText({
+  paste("₹",format(round(sum(Expenses_Summary()$Total_Expense,na.rm=T)), nsmall=0, big.mark=","))
 })
 
 output$ExpensesTable <- renderDataTable({
