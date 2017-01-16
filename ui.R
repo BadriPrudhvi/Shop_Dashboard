@@ -2,6 +2,9 @@ library(shinydashboard)
 library(shiny)
 library(DT)
 library(dygraphs)
+library(ggplot2)
+library(plotly)
+library(highcharter)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Sales Dashboard")
@@ -10,8 +13,10 @@ ui <- dashboardPage(
     sidebarMenu(
        menuItem("Portfolio", tabName = "Portfolio", icon = icon("dashboard"))
        ,menuItem("Sale Analysis", tabName = "SaleAnalysis", icon = icon("line-chart"))
-       ,menuItem("Stocks & Payments", tabName = "Stocks_Payments", icon = icon("inr"))
+       # ,menuItem("Stocks & Payments", tabName = "Stocks_Payments", icon = icon("inr"))
+       ,menuItem("Payments", tabName = "payments", icon = icon("briefcase"))
        ,menuItem("Expense Analysis", tabName = "ExpenseAnalysis", icon = icon("pie-chart"))
+       ,menuItem("Stocks", tabName = "stocks", icon = icon("cubes"))
     )
     ,dateRangeInput("daterange", "Date Range:", start = '2016-09-15', min = '2016-09-15')
   )
@@ -142,7 +147,7 @@ ui <- dashboardPage(
         ,fluidRow(
           box(
           uiOutput('ItemList')
-          ,status = "primary"
+          ,status = "success"
           ,collapsible = TRUE
           ,width = 2
           )
@@ -150,54 +155,125 @@ ui <- dashboardPage(
           ,fluidRow(
             tabBox(
               tabPanel("Product View"
-                       , dataTableOutput("SalesTable")
-                       , width = 12
-                       , status = "primary"
-                       
+                       ,fluidRow(
+                         box(
+                           title = "Sales By Product"
+                           , collapsible = TRUE
+                           , dataTableOutput("SalesTable")
+                           , width = 6
+                           , status = 'success'
+                         )
+                         ,box(
+                           title = "Sale Distribution"
+                           , collapsible = TRUE
+                           , highchartOutput("Sale_distribution")
+                           , width = 6
+                           , status = 'success'
+                         )
+                       )
               )
-              ,tabPanel("Time View"
-                        # , dygraphOutput("Average_Trends_Plot")
+               ,tabPanel("Time View"
+                        ,fluidRow(
+                          box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                  ,selectInput('saletimeslice', 'Time View'
+                                               , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                               , selected = 'Week'))
+                              ,status = "success"
+                              ,width = 2)
+                          ,valueBox(
+                            uiOutput("SaleMoney")
+                            , "Sale Value"
+                            , color = "green"
+                            , width = 3
+                          )
+                        )
+                        ,fluidRow(
+                        box(
+                          title = "Sale Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Sales_Time_Table")
+                          , width = 6
+                          , status = 'success'
+                        )
+                        ,box(
+                          title = "Sale Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Sale_Plot_Time")
+                          , width = 6
+                          , status = 'success'
+                        )
+                        )
+                     
                         , width = 12
-                        , status = "primary"
+                        , status = "success"
               )
               ,width = 12
             )
         )
       )
       ,tabItem(
-        tabName = "Stocks_Payments"
+        tabName = "payments"
         ,fluidRow(
           box(
-            uiOutput('DealerList')
-            ,status = "primary"
+            uiOutput('Payment_Dealers_List')
+            ,status = "warning"
             ,collapsible = TRUE
             ,width = 2
           )
         )
         ,fluidRow(
           tabBox(
-            tabPanel("Stock View"
-                     ,valueBox(
-                       uiOutput("TotStock")
-                       , "Total Stock"
-                       , color = "blue"
-                       , width = 3
+            tabPanel("Overall View"
+                     ,fluidRow(
+                       box(
+                         title = "Payments By Dealer"
+                         , collapsible = TRUE
+                         , dataTableOutput("PaymentTable")
+                         , width = 6
+                         , status = 'warning'
+                       )
+                       ,box(
+                         title = "Payment Distribution"
+                         , collapsible = TRUE
+                         , highchartOutput("Payment_distribution")
+                         , width = 6
+                         , status = 'warning'
+                       )
                      )
-                     , dataTableOutput("StockTable")
-                     , width = 12
-                     , status = "primary"
-                     
             )
-            ,tabPanel("Payment View"
-                      ,valueBox(
-                        uiOutput("TotPayment")
-                        , "Total Payment"
-                        , color = "orange"
-                        , width = 3
+            ,tabPanel("Time View"
+                      ,fluidRow(
+                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                ,selectInput('paymenttimeslice', 'Time View'
+                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                             , selected = 'Week'))
+                            ,status = "warning"
+                            ,width = 2)
+                        ,valueBox(
+                          uiOutput("TotPayment")
+                          , "Total Payment"
+                          , color = "orange"
+                          , width = 3
+                        )
                       )
-                      , dataTableOutput("PaymentTable")
+                      ,fluidRow(
+                        box(
+                          title = "Payment Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Payment_Time_Table")
+                          , width = 6
+                          , status = 'warning'
+                        )
+                        ,box(
+                          title = "Payment Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Payment_Plot_Time")
+                          , width = 6
+                          , status = 'warning'
+                        )
+                      )
                       , width = 12
-                      , status = "primary"
+                      , status = "warning"
             )
             ,width = 12
           )
@@ -208,6 +284,74 @@ ui <- dashboardPage(
         ,fluidRow(
           box(
             uiOutput('Expense_SourceList')
+            ,status = "danger"
+            ,collapsible = TRUE
+            ,width = 2
+          )
+        )
+        ,fluidRow(
+          tabBox(
+            tabPanel("Overall View"
+                     ,fluidRow(
+                       box(
+                         title = "Expenses By Type"
+                         , collapsible = TRUE
+                         , dataTableOutput("ExpensesTable")
+                         , width = 6
+                         , status = 'danger'
+                       )
+                       ,box(
+                         title = "Expense Distribution"
+                         , collapsible = TRUE
+                         , highchartOutput("Expense_distribution")
+                         , width = 6
+                         , status = 'danger'
+                       )
+                     )
+            )
+             ,tabPanel("Time View"
+                      ,fluidRow(
+                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                ,selectInput('expensetimeslice', 'Time View'
+                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                             , selected = 'Week'))
+                            ,status = "danger"
+                            ,width = 2)
+                        ,valueBox(
+                          uiOutput("TotExpense")
+                          , "Total Expense"
+                          , color = "red"
+                          , width = 3
+                        )
+                      )
+                      ,fluidRow(
+                        box(
+                          title = "Expense Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Expenses_Time_Table")
+                          , width = 6
+                          , status = 'danger'
+                        )
+                        ,box(
+                          title = "Expense Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Expense_Plot_Time")
+                          , width = 6
+                          , status = 'danger'
+                        )
+                      )
+                      , width = 12
+                      , status = "danger"
+            )
+            ,width = 12
+          )
+        )
+      )
+      ,tabItem(
+        tabName = "stocks"
+        ,fluidRow(
+          box(
+            uiOutput('DealerList')
             ,status = "primary"
             ,collapsible = TRUE
             ,width = 2
@@ -216,19 +360,54 @@ ui <- dashboardPage(
         ,fluidRow(
           tabBox(
             tabPanel("Overall View"
-                     ,valueBox(
-                       uiOutput("TotExpense")
-                       , "Total Expense"
-                       , color = "red"
-                       , width = 3
+                     ,fluidRow(
+                       box(
+                         title = "Stocks By Dealer"
+                         , collapsible = TRUE
+                         , dataTableOutput("StockTable")
+                         , width = 6
+                         , status = 'primary'
+                       )
+                       ,box(
+                         title = "Stock Distribution"
+                         , collapsible = TRUE
+                         , highchartOutput("Stock_distribution")
+                         , width = 6
+                         , status = 'primary'
+                       )
                      )
-                     , dataTableOutput("ExpensesTable")
-                     , width = 12
-                     , status = "primary"
-                     
             )
             ,tabPanel("Time View"
-                      # , dygraphOutput("Average_Trends_Plot")
+                      ,fluidRow(
+                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                ,selectInput('stocktimeslice', 'Time View'
+                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                             , selected = 'Week'))
+                            ,status = "primary"
+                            ,width = 2)
+                        ,valueBox(
+                          uiOutput("TotStock")
+                          , "Total Stock Worth"
+                          , color = "blue"
+                          , width = 3
+                        )
+                      )
+                      ,fluidRow(
+                        box(
+                          title = "Stock Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Stock_Time_Table")
+                          , width = 6
+                          , status = 'primary'
+                        )
+                        ,box(
+                          title = "Stock Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Stock_Plot_Time")
+                          , width = 6
+                          , status = 'primary'
+                        )
+                      )
                       , width = 12
                       , status = "primary"
             )
@@ -236,6 +415,7 @@ ui <- dashboardPage(
           )
         )
       )
+      
     )
   )
 )
