@@ -78,7 +78,11 @@ output$AveragePayment <- renderText({
 })
 
 output$MyInvestment <- renderText({
-  paste("₹",format(round(sum(Full_shopData()$Investment,na.rm=T)), nsmall=0, big.mark=","))
+  Invest <- Full_shopData() %>% 
+    mutate(Deposit_Date = as.Date(Deposit_Date,"%m/%d/%Y")) %>%
+    filter( Deposit_Date >= input$daterange[1]
+            & Deposit_Date <= input$daterange[2] )
+  paste("₹",format(round(sum(Invest$Investment,na.rm=T)), nsmall=0, big.mark=","))
 })
 
 output$ProfitPercent <- renderText({
@@ -90,7 +94,11 @@ output$ExpensePercent <- renderText({
 })
 
 output$StockWorth <- renderText({
-  paste("₹",format(round(sum(Stock_Data()$Worth,na.rm=T)), nsmall=0, big.mark=","))
+  stocks <- Stock_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] )
+  paste("₹",format(round(sum(stocks$Worth,na.rm=T)), nsmall=0, big.mark=","))
 })
 
 shop_Summary <- reactive({
@@ -231,6 +239,10 @@ output$SaleMoney <- renderText({
   paste("₹",format(round(sum(Sales_By_Time()$Total_Sale,na.rm=T)), nsmall=0, big.mark=","))
 })
 
+output$AvgSaleMoney <- renderText({
+  paste("₹",format(round(mean(Sales_By_Time()$Total_Sale,na.rm=T)), nsmall=0, big.mark=","))
+})
+
 output$Sale_Plot_Time <- renderHighchart({
   pdf(NULL)
   g <-  highchart() %>% 
@@ -253,7 +265,7 @@ output$Sale_distribution <- renderHighchart({
                                 , type = "pie"
                                 , name = "Sale Percent"
                                 , colorByPoint = TRUE
-                                , size = 350
+                                , size = 300
     )
   dev.off()
   g
@@ -282,6 +294,389 @@ output$SalesTable <- renderDataTable({
 output$Sales_Time_Table <- renderDataTable({
   datatable(
     Sales_By_Time() %>% arrange(desc(Date))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") 
+  # %>% formatPercentage(5,digits=2)
+})
+
+################################ Profit Analysis Tab #######################################
+output$ProductList <- renderUI({
+  selectizeInput("Products"
+                 , "Products:"
+                 , sort(unique(tolower(as.character(Sales_Data()$Item))))
+                 , NULL
+                 , multiple =TRUE)
+})
+
+Profit_report <- reactive({
+  if(is.null(input$Products)){
+    ProductsO <- unique(tolower(Sales_Data()$Item))
+  }else{
+    ProductsO <- input$Products
+  }
+  
+  Sales_Data() %>%
+    filter(
+      tolower(Item) %in% ProductsO
+    )
+})
+
+Profit_Summary <- reactive({
+  Profit_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Entire_Profit = sum(Profit,na.rm=T)) %>%
+    group_by(Item = tolower(Item)) %>%
+    summarise( Transactions = n(),
+               Total_Profit = sum(Profit,na.rm=T),
+               Avg_Profit = round(mean(Profit,na.rm=T),2),
+               Profit_Percent = sum(Profit,na.rm=T)/mean(Entire_Profit,na.rm=T)
+    )
+})
+
+Profit_By_Time <- reactive({
+  Profit_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Profit_Sale = sum(Profit,na.rm=T)) %>%
+    group_by(Date = floor_date(Date, tolower(input$profittimeslice))
+    ) %>%
+    summarise( Transactions = n(),
+               Total_Profit = sum(Profit,na.rm=T),
+               Avg_Profit = round(mean(Profit,na.rm=T),2)
+               # ,Sale_Percent = sum(Selling_Price,na.rm=T)/mean(Entire_Sale,na.rm=T)
+    )
+})
+
+output$ProfitMoney <- renderText({
+  paste("₹",format(round(sum(Profit_By_Time()$Total_Profit,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$AvgProfitMoney <- renderText({
+  paste("₹",format(round(mean(Profit_By_Time()$Total_Profit,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$Profit_Plot_Time <- renderHighchart({
+  pdf(NULL)
+  g <-  highchart() %>% 
+    hc_yAxis(labels = list(format = "{value:,.0f}")) %>%
+    hc_add_series_times_values(Profit_By_Time()$Date, Profit_By_Time()$Total_Profit
+                               ,name = "Profit Money"
+                               ,colorByPoint=TRUE
+                               ,type = "column"
+                               ,showInLegend = FALSE) %>%
+    hc_chart(options3d = list(enabled = TRUE,beta=15,alpha=5))
+  dev.off()
+  g
+})
+
+output$Profit_distribution <- renderHighchart({
+  Profit_Pie <- Profit_Summary() %>% mutate(Profit_Percent = round(Profit_Percent *100,2))
+  pdf(NULL)
+  g <-  highchart() %>%
+    hc_add_series_labels_values(Profit_Pie$Item, Profit_Pie$Profit_Percent
+                                , type = "pie"
+                                , name = "Profit Percent"
+                                , colorByPoint = TRUE
+                                , size = 300
+    )
+  dev.off()
+  g
+})
+
+output$ProfitTable <- renderDataTable({
+  datatable(
+    Profit_Summary() %>% arrange(desc(Total_Profit))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") %>%
+    formatPercentage(5,digits=2)
+})
+
+output$Profit_Time_Table <- renderDataTable({
+  datatable(
+    Profit_By_Time() %>% arrange(desc(Date))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") 
+  # %>% formatPercentage(5,digits=2)
+})
+
+################################ Expense Analysis Tab #####################################
+
+output$Expense_SourceList <- renderUI({
+  selectizeInput("Expenses_Source"
+                 , "Expenses Source:"
+                 , sort(unique(tolower(as.character(Expense_Data()$Expense_Type))))
+                 , NULL
+                 , multiple =TRUE)
+})
+
+Expenses_report <- reactive({
+  if(is.null(input$Expenses_Source)){
+    TypeO <- unique(tolower(Expense_Data()$Expense_Type))
+  }else{
+    TypeO <- input$Expenses_Source
+  }
+  
+  Expense_Data() %>%
+    filter(
+      tolower(Expense_Type) %in% TypeO
+    )
+})
+
+Expenses_Summary <- reactive({
+  Expenses_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Entire_Expense = sum(Expense_Amount,na.rm=T)) %>%
+    group_by(Expense_Type = tolower(Expense_Type)) %>%
+    summarise( Transactions = n(),
+               Total_Expense = sum(Expense_Amount,na.rm=T),
+               Avg_Expense = round(mean(Expense_Amount,na.rm=T),2),
+               Expense_Percent = sum(Expense_Amount,na.rm=T)/mean(Entire_Expense,na.rm=T)
+    )
+})
+
+Expenses_By_Time <- reactive({
+  Expenses_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Entire_Expense = sum(Expense_Amount,na.rm=T)) %>%
+    group_by(Date = floor_date(Date, tolower(input$expensetimeslice))
+             ) %>%
+    summarise( Transactions = n(),
+               Total_Expense = sum(Expense_Amount,na.rm=T),
+               Avg_Expense = round(mean(Expense_Amount,na.rm=T),2)
+               # ,Expense_Percent = sum(Expense_Amount,na.rm=T)/mean(Entire_Expense,na.rm=T)
+    )
+})
+
+output$TotExpense <- renderText({
+  paste("₹",format(round(sum(Expenses_By_Time()$Total_Expense,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$AvgExpenseMoney <- renderText({
+  paste("₹",format(round(mean(Expenses_By_Time()$Total_Expense,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$Expense_Plot_Time <- renderHighchart({
+  pdf(NULL)
+  g <-  highchart() %>% 
+    hc_yAxis(labels = list(format = "{value:,.0f}")) %>%
+    hc_add_series_times_values(Expenses_By_Time()$Date, Expenses_By_Time()$Total_Expense
+                               ,name = "Expense Money"
+                               ,colorByPoint=TRUE
+                               ,type = "column"
+                               ,showInLegend = FALSE) %>%
+    hc_chart(options3d = list(enabled = TRUE,beta=15,alpha=5))
+  dev.off()
+  g
+})
+
+output$Expense_distribution <- renderHighchart({
+  Expenses_Pie <- Expenses_Summary() %>% mutate(Expense_Percent = round(Expense_Percent *100,2))
+  pdf(NULL)
+  g <-  highchart() %>%
+    hc_add_series_labels_values(Expenses_Pie$Expense_Type, Expenses_Pie$Expense_Percent
+                                , type = "pie"
+                                , name = "Expense Percent"
+                                , colorByPoint = TRUE
+                                , size = 300
+    )
+  dev.off()
+  g
+})
+
+output$ExpensesTable <- renderDataTable({
+  datatable(
+    Expenses_Summary() %>% arrange(desc(Total_Expense))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") %>%
+    formatPercentage(5,digits=2)
+})
+
+output$Expenses_Time_Table <- renderDataTable({
+  datatable(
+    Expenses_By_Time() %>% arrange(desc(Date))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") 
+  # %>% formatPercentage(6,digits=2)
+})
+
+####################################### Payments Tab ##################################################
+
+output$Payment_Dealers_List <- renderUI({
+  selectizeInput("paymentDealers"
+                 , "Dealers:"
+                 , sort(unique(tolower(as.character(Payment_Data()$Dealer))))
+                 , NULL
+                 , multiple =TRUE)
+})
+
+Payment_report <- reactive({
+  if(is.null(input$paymentDealers)){
+    DealersO <- unique(tolower(Payment_Data()$Dealer))
+  }else{
+    DealersO <- input$paymentDealers
+  }
+  
+  Payment_Data() %>%
+    filter(
+      tolower(Dealer) %in% DealersO
+    )
+})
+
+Payment_Summary <- reactive({
+  Payment_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Entire_Payment = sum(Payment_Amount,na.rm=T)) %>%
+    group_by(Dealer = tolower(Dealer)) %>%
+    summarise( Transactions = n(),
+               Total_Payment = sum(Payment_Amount,na.rm=T),
+               Avg_Payment = round(mean(Payment_Amount,na.rm=T),2),
+               Payment_Percent = sum(Payment_Amount,na.rm=T)/mean(Entire_Payment,na.rm=T)
+    )
+})
+
+Payment_By_Time <- reactive({
+  Payment_report() %>%
+    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+    filter( Date >= input$daterange[1]
+            & Date <= input$daterange[2] ) %>%
+    mutate(Entire_Payment = sum(Payment_Amount,na.rm=T)) %>%
+    group_by(Date = floor_date(Date, tolower(input$paymenttimeslice))
+    ) %>%
+    summarise( Transactions = n(),
+               Total_Payment = sum(Payment_Amount,na.rm=T),
+               Avg_Payment = round(mean(Payment_Amount,na.rm=T),2)
+               # ,Payment_Percent = sum(Payment_Amount,na.rm=T)/mean(Entire_Payment,na.rm=T)
+    )
+})
+
+output$TotPayment <- renderText({
+  paste("₹",format(round(sum(Payment_By_Time()$Total_Payment,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$AvgPaymentMoney <- renderText({
+  paste("₹",format(round(mean(Payment_By_Time()$Total_Payment,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$Payment_Plot_Time <- renderHighchart({
+  pdf(NULL)
+  g <-  highchart() %>% 
+    hc_yAxis(labels = list(format = "{value:,.0f}")) %>%
+    hc_add_series_times_values(Payment_By_Time()$Date, Payment_By_Time()$Total_Payment
+                               ,name = "Payment Money"
+                               ,colorByPoint=TRUE
+                               ,type = "column"
+                               ,showInLegend = FALSE) %>%
+    hc_chart(options3d = list(enabled = TRUE,beta=15,alpha=5))
+  dev.off()
+  g
+})
+
+output$Payment_distribution <- renderHighchart({
+  Payments_Pie <- Payment_Summary() %>% mutate(Payment_Percent = round(Payment_Percent *100,2))
+  pdf(NULL)
+  g <-  highchart() %>%
+    hc_add_series_labels_values(Payments_Pie$Dealer, Payments_Pie$Payment_Percent
+                                , type = "pie"
+                                , name = "Payment Percent"
+                                , colorByPoint = TRUE
+                                , size = 300
+    )
+  dev.off()
+  g
+})
+
+output$PaymentTable <- renderDataTable({
+  datatable(
+    Payment_Summary() %>% arrange(desc(Total_Payment))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(3:4,currency="₹ ") %>%
+    formatPercentage(5,digits=2)
+})
+
+output$Payment_Time_Table <- renderDataTable({
+  datatable(
+    Payment_By_Time() %>% arrange(desc(Date))
     ,rownames=FALSE
     ,filter = "top"
     ,extensions = c("Buttons","FixedColumns")
@@ -356,6 +751,10 @@ output$TotStock <- renderText({
   paste("₹",format(round(sum(Stock_By_Time()$Total_Stock_Price,na.rm=T)), nsmall=0, big.mark=","))
 })
 
+output$AvgStockMoney <- renderText({
+  paste("₹",format(round(mean(Stock_By_Time()$Total_Stock_Price,na.rm=T)), nsmall=0, big.mark=","))
+})
+
 output$Stock_Plot_Time <- renderHighchart({
   pdf(NULL)
   g <-  highchart() %>% 
@@ -378,7 +777,7 @@ output$Stock_distribution <- renderHighchart({
                                 , type = "pie"
                                 , name = "Stock Percent"
                                 , colorByPoint = TRUE
-                                , size = 350
+                                , size = 275
     )
   dev.off()
   g
@@ -422,254 +821,6 @@ output$Stock_Time_Table <- renderDataTable({
     )
   ) %>% formatCurrency(3:4,currency="₹ ") 
   # %>% formatPercentage(5,digits=2)
-})
-
-####################################### Payments Tab ##################################################
-
-output$Payment_Dealers_List <- renderUI({
-  selectizeInput("paymentDealers"
-                 , "Dealers:"
-                 , sort(unique(tolower(as.character(Payment_Data()$Dealer))))
-                 , NULL
-                 , multiple =TRUE)
-})
-
-Payment_report <- reactive({
-  if(is.null(input$paymentDealers)){
-    DealersO <- unique(tolower(Payment_Data()$Dealer))
-  }else{
-    DealersO <- input$paymentDealers
-  }
-  
-  Payment_Data() %>%
-    filter(
-      tolower(Dealer) %in% DealersO
-    )
-})
-
-Payment_Summary <- reactive({
-  Payment_report() %>%
-    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
-    filter( Date >= input$daterange[1]
-            & Date <= input$daterange[2] ) %>%
-    mutate(Entire_Payment = sum(Payment_Amount,na.rm=T)) %>%
-    group_by(Dealer = tolower(Dealer)) %>%
-    summarise( Transactions = n(),
-               Total_Payment = sum(Payment_Amount,na.rm=T),
-               Avg_Payment = round(mean(Payment_Amount,na.rm=T),2),
-               Payment_Percent = sum(Payment_Amount,na.rm=T)/mean(Entire_Payment,na.rm=T)
-    )
-})
-
-Payment_By_Time <- reactive({
-  Payment_report() %>%
-    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
-    filter( Date >= input$daterange[1]
-            & Date <= input$daterange[2] ) %>%
-    mutate(Entire_Payment = sum(Payment_Amount,na.rm=T)) %>%
-    group_by(Date = floor_date(Date, tolower(input$paymenttimeslice))
-    ) %>%
-    summarise( Transactions = n(),
-               Total_Payment = sum(Payment_Amount,na.rm=T),
-               Avg_Payment = round(mean(Payment_Amount,na.rm=T),2)
-               # ,Payment_Percent = sum(Payment_Amount,na.rm=T)/mean(Entire_Payment,na.rm=T)
-    )
-})
-
-output$TotPayment <- renderText({
-  paste("₹",format(round(sum(Payment_By_Time()$Total_Payment,na.rm=T)), nsmall=0, big.mark=","))
-})
-
-output$Payment_Plot_Time <- renderHighchart({
-  pdf(NULL)
-  g <-  highchart() %>% 
-    hc_yAxis(labels = list(format = "{value:,.0f}")) %>%
-    hc_add_series_times_values(Payment_By_Time()$Date, Payment_By_Time()$Total_Payment
-                               ,name = "Payment Money"
-                               ,colorByPoint=TRUE
-                               ,type = "column"
-                               ,showInLegend = FALSE) %>%
-    hc_chart(options3d = list(enabled = TRUE,beta=15,alpha=5))
-  dev.off()
-  g
-})
-
-output$Payment_distribution <- renderHighchart({
-  Payments_Pie <- Payment_Summary() %>% mutate(Payment_Percent = round(Payment_Percent *100,2))
-  pdf(NULL)
-  g <-  highchart() %>%
-    hc_add_series_labels_values(Payments_Pie$Dealer, Payments_Pie$Payment_Percent
-                                , type = "pie"
-                                , name = "Payment Percent"
-                                , colorByPoint = TRUE
-                                , size = 350
-    )
-  dev.off()
-  g
-})
-
-output$PaymentTable <- renderDataTable({
-  datatable(
-    Payment_Summary() %>% arrange(desc(Total_Payment))
-    ,rownames=FALSE
-    ,filter = "top"
-    ,extensions = c("Buttons","FixedColumns")
-    , options = list(
-      dom = 'Bfrtip'
-      , buttons = c('pageLength', 'colvis', 'csv')
-      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
-      , pageLength = 10
-      , searchHighlight = TRUE
-      , width="100%"
-      , scrollX = TRUE
-      , fixedColumns = list(leftColumns = 1)
-    )
-  ) %>% formatCurrency(3:4,currency="₹ ") %>%
-    formatPercentage(5,digits=2)
-})
-
-output$Payment_Time_Table <- renderDataTable({
-  datatable(
-    Payment_By_Time() %>% arrange(desc(Date))
-    ,rownames=FALSE
-    ,filter = "top"
-    ,extensions = c("Buttons","FixedColumns")
-    , options = list(
-      dom = 'Bfrtip'
-      , buttons = c('pageLength', 'colvis', 'csv')
-      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
-      , pageLength = 10
-      , searchHighlight = TRUE
-      , width="100%"
-      , scrollX = TRUE
-      , fixedColumns = list(leftColumns = 1)
-    )
-  ) %>% formatCurrency(3:4,currency="₹ ") 
-  # %>% formatPercentage(5,digits=2)
-})
-
-################################ Expense Analysis Tab #####################################
-
-output$Expense_SourceList <- renderUI({
-  selectizeInput("Expenses_Source"
-                 , "Expenses Source:"
-                 , sort(unique(tolower(as.character(Expense_Data()$Expense_Type))))
-                 , NULL
-                 , multiple =TRUE)
-})
-
-Expenses_report <- reactive({
-  if(is.null(input$Expenses_Source)){
-    TypeO <- unique(tolower(Expense_Data()$Expense_Type))
-  }else{
-    TypeO <- input$Expenses_Source
-  }
-  
-  Expense_Data() %>%
-    filter(
-      tolower(Expense_Type) %in% TypeO
-    )
-})
-
-Expenses_Summary <- reactive({
-  Expenses_report() %>%
-    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
-    filter( Date >= input$daterange[1]
-            & Date <= input$daterange[2] ) %>%
-    mutate(Entire_Expense = sum(Expense_Amount,na.rm=T)) %>%
-    group_by(Expense_Type = tolower(Expense_Type)) %>%
-    summarise( Transactions = n(),
-               Total_Expense = sum(Expense_Amount,na.rm=T),
-               Avg_Expense = round(mean(Expense_Amount,na.rm=T),2),
-               Expense_Percent = sum(Expense_Amount,na.rm=T)/mean(Entire_Expense,na.rm=T)
-    )
-})
-
-Expenses_By_Time <- reactive({
-  Expenses_report() %>%
-    mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
-    filter( Date >= input$daterange[1]
-            & Date <= input$daterange[2] ) %>%
-    mutate(Entire_Expense = sum(Expense_Amount,na.rm=T)) %>%
-    group_by(Date = floor_date(Date, tolower(input$expensetimeslice))
-             ) %>%
-    summarise( Transactions = n(),
-               Total_Expense = sum(Expense_Amount,na.rm=T),
-               Avg_Expense = round(mean(Expense_Amount,na.rm=T),2)
-               # ,Expense_Percent = sum(Expense_Amount,na.rm=T)/mean(Entire_Expense,na.rm=T)
-    )
-})
-
-output$TotExpense <- renderText({
-  paste("₹",format(round(sum(Expenses_By_Time()$Total_Expense,na.rm=T)), nsmall=0, big.mark=","))
-})
-
-output$Expense_Plot_Time <- renderHighchart({
-  pdf(NULL)
-  g <-  highchart() %>% 
-    hc_yAxis(labels = list(format = "{value:,.0f}")) %>%
-    hc_add_series_times_values(Expenses_By_Time()$Date, Expenses_By_Time()$Total_Expense
-                               ,name = "Expense Money"
-                               ,colorByPoint=TRUE
-                               ,type = "column"
-                               ,showInLegend = FALSE) %>%
-    hc_chart(options3d = list(enabled = TRUE,beta=15,alpha=5))
-  dev.off()
-  g
-})
-
-output$Expense_distribution <- renderHighchart({
-  Expenses_Pie <- Expenses_Summary() %>% mutate(Expense_Percent = round(Expense_Percent *100,2))
-  pdf(NULL)
-  g <-  highchart() %>%
-    hc_add_series_labels_values(Expenses_Pie$Expense_Type, Expenses_Pie$Expense_Percent
-                                , type = "pie"
-                                , name = "Expense Percent"
-                                , colorByPoint = TRUE
-                                , size = 350
-    )
-  dev.off()
-  g
-})
-
-output$ExpensesTable <- renderDataTable({
-  datatable(
-    Expenses_Summary() %>% arrange(desc(Total_Expense))
-    ,rownames=FALSE
-    ,filter = "top"
-    ,extensions = c("Buttons","FixedColumns")
-    , options = list(
-      dom = 'Bfrtip'
-      , buttons = c('pageLength', 'colvis', 'csv')
-      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
-      , pageLength = 10
-      , searchHighlight = TRUE
-      , width="100%"
-      , scrollX = TRUE
-      , fixedColumns = list(leftColumns = 1)
-    )
-  ) %>% formatCurrency(3:4,currency="₹ ") %>%
-    formatPercentage(5,digits=2)
-})
-
-output$Expenses_Time_Table <- renderDataTable({
-  datatable(
-    Expenses_By_Time() %>% arrange(desc(Date))
-    ,rownames=FALSE
-    ,filter = "top"
-    ,extensions = c("Buttons","FixedColumns")
-    , options = list(
-      dom = 'Bfrtip'
-      , buttons = c('pageLength', 'colvis', 'csv')
-      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
-      , pageLength = 10
-      , searchHighlight = TRUE
-      , width="100%"
-      , scrollX = TRUE
-      , fixedColumns = list(leftColumns = 1)
-    )
-  ) %>% formatCurrency(3:4,currency="₹ ") 
-  # %>% formatPercentage(6,digits=2)
 })
 
 }

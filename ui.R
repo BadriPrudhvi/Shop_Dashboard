@@ -13,9 +13,9 @@ ui <- dashboardPage(
     sidebarMenu(
        menuItem("Portfolio", tabName = "Portfolio", icon = icon("dashboard"))
        ,menuItem("Sale Analysis", tabName = "SaleAnalysis", icon = icon("line-chart"))
-       # ,menuItem("Stocks & Payments", tabName = "Stocks_Payments", icon = icon("inr"))
-       ,menuItem("Payments", tabName = "payments", icon = icon("briefcase"))
+       ,menuItem("Profit Analysis", tabName = "ProfitAnalysis", icon = icon("inr"))
        ,menuItem("Expense Analysis", tabName = "ExpenseAnalysis", icon = icon("pie-chart"))
+       ,menuItem("Payments", tabName = "payments", icon = icon("briefcase"))
        ,menuItem("Stocks", tabName = "stocks", icon = icon("cubes"))
     )
     ,dateRangeInput("daterange", "Date Range:", start = '2016-09-15', min = '2016-09-15')
@@ -186,6 +186,12 @@ ui <- dashboardPage(
                             , color = "green"
                             , width = 3
                           )
+                          ,valueBox(
+                            uiOutput("AvgSaleMoney")
+                            , "Average Sale By Time"
+                            , color = "olive"
+                            , width = 3
+                          )
                         )
                         ,fluidRow(
                         box(
@@ -255,6 +261,12 @@ ui <- dashboardPage(
                           , color = "orange"
                           , width = 3
                         )
+                        ,valueBox(
+                          uiOutput("AvgPaymentMoney")
+                          , "Average Payment By Time"
+                          , color = "yellow"
+                          , width = 3
+                        )
                       )
                       ,fluidRow(
                         box(
@@ -274,6 +286,80 @@ ui <- dashboardPage(
                       )
                       , width = 12
                       , status = "warning"
+            )
+            ,width = 12
+          )
+        )
+      )
+      ,tabItem(
+        tabName = "ProfitAnalysis"
+        ,fluidRow(
+          box(
+            uiOutput('ProductList')
+            ,status = "success"
+            ,collapsible = TRUE
+            ,width = 2
+          )
+        )
+        ,fluidRow(
+          tabBox(
+            tabPanel("Overall View"
+                     ,fluidRow(
+                       box(
+                         title = "Profit By Product"
+                         , collapsible = TRUE
+                         , dataTableOutput("ProfitTable")
+                         , width = 6
+                         , status = 'success'
+                       )
+                       ,box(
+                         title = "Profit Distribution"
+                         , collapsible = TRUE
+                         , highchartOutput("Profit_distribution")
+                         , width = 6
+                         , status = 'success'
+                       )
+                     )
+            )
+            ,tabPanel("Time View"
+                      ,fluidRow(
+                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                ,selectInput('profittimeslice', 'Time View'
+                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                             , selected = 'Week'))
+                            ,status = "success"
+                            ,width = 2)
+                        ,valueBox(
+                          uiOutput("ProfitMoney")
+                          , "Total Profit"
+                          , color = "green"
+                          , width = 3
+                        )
+                        ,valueBox(
+                          uiOutput("AvgProfitMoney")
+                          , "Average Profit By Time"
+                          , color = "olive"
+                          , width = 3
+                        )
+                      )
+                      ,fluidRow(
+                        box(
+                          title = "Profit Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Profit_Time_Table")
+                          , width = 6
+                          , status = 'success'
+                        )
+                        ,box(
+                          title = "Profit Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Profit_Plot_Time")
+                          , width = 6
+                          , status = 'success'
+                        )
+                      )
+                      , width = 12
+                      , status = "success"
             )
             ,width = 12
           )
@@ -321,6 +407,12 @@ ui <- dashboardPage(
                           uiOutput("TotExpense")
                           , "Total Expense"
                           , color = "red"
+                          , width = 3
+                        )
+                        ,valueBox(
+                          uiOutput("AvgExpenseMoney")
+                          , "Average Expense By Time"
+                          , color = "maroon"
                           , width = 3
                         )
                       )
@@ -389,6 +481,12 @@ ui <- dashboardPage(
                           uiOutput("TotStock")
                           , "Total Stock Worth"
                           , color = "blue"
+                          , width = 3
+                        )
+                        ,valueBox(
+                          uiOutput("AvgStockMoney")
+                          , "Average Stock By Time"
+                          , color = "light-blue"
                           , width = 3
                         )
                       )
