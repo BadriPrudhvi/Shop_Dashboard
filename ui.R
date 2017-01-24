@@ -102,6 +102,32 @@ ui <- dashboardPage(
             , width = 3
           )
         )
+        ,fluidRow(
+          valueBox(
+            uiOutput("NetSale")
+            , "Net Sale"
+            , color = "green"
+            , width = 3
+          )
+          ,valueBox(
+            uiOutput("EarnedMoney")
+            , "Earned Money"
+            , color = "green"
+            , width = 3
+          )
+          ,valueBox(
+            uiOutput("PaymentPercentwithProfit")
+            , "Payment Percent including Profit"
+            , color = "yellow"
+            , width = 3
+          )
+          ,valueBox(
+            uiOutput("PaymentPercentwithoutProfit")
+            , "Payment Percent excluding Profit"
+            , color = "orange"
+            , width = 3
+          )
+        )
       ,fluidRow(
         box(
           title = "Trends Over Time"
@@ -112,6 +138,12 @@ ui <- dashboardPage(
                                   , selected = 'Month'))
                  ,status = "primary"
                  ,width = 2)
+             ,valueBox(
+               uiOutput("TotalDays")
+               , "Total Days"
+               , color = "navy"
+               , width = 3
+             )
            )
           ,fluidRow(
             tabBox(
@@ -127,11 +159,11 @@ ui <- dashboardPage(
                           , width = 12
                           , status = "primary"
               )
-              ,tabPanel("Percentage Trends"
-                        , dygraphOutput("Percent_Trends_Plot")
-                        , width = 12
-                        , status = "primary"
-              )
+              # ,tabPanel("Percentage Trends"
+              #           , dygraphOutput("Percent_Trends_Plot")
+              #           , width = 12
+              #           , status = "primary"
+              # )
               ,width = 12
             )
           )

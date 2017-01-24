@@ -15,26 +15,31 @@ Sales_Data <- gs_title("Sale_Transactions") %>% gs_read()
 Payment_Data <- gs_title("Payment_Transactions") %>% gs_read()
 Expense_Data <- gs_title("Expense_Transactions") %>% gs_read()
 
-saveRDS(shopData,"~/Documents/ShopSales.rds")
-saveRDS(Stock_Data,"~/Documents/Stock_Data.rds")
-saveRDS(Sales_Data,"~/Documents/Sales_Data.rds")
-saveRDS(Payment_Data,"~/Documents/Payment_Data.rds")
-saveRDS(Expense_Data,"~/Documents/Expense_Data.rds")
+saveRDS(shopData,"/Users/bprudhvi/Documents/Shop_Dashboard/ShopSales.rds")
+saveRDS(Stock_Data,"/Users/bprudhvi/Documents/Shop_Dashboard/Stock_Data.rds")
+saveRDS(Sales_Data,"/Users/bprudhvi/Documents/Shop_Dashboard/Sales_Data.rds")
+saveRDS(Payment_Data,"/Users/bprudhvi/Documents/Shop_Dashboard/Payment_Data.rds")
+saveRDS(Expense_Data,"/Users/bprudhvi/Documents/Shop_Dashboard/Expense_Data.rds")
+
+# library(rsconnect)
+# packrat:::appDependencies()
+# install.packages("shinydashboard")
+# rsconnect::deployApp('/Users/bprudhvi/Documents/Shop_Dashboard')
 
 Full_shopData <- reactiveFileReader(60000, session = NULL
-                           , filePath = '~/Documents/ShopSales.rds', readRDS)
+                           , filePath = 'ShopSales.rds', readRDS)
 
 Stock_Data <- reactiveFileReader(60000, session = NULL
-                                 , filePath = '~/Documents/Stock_Data.rds', readRDS)
+                                 , filePath = 'Stock_Data.rds', readRDS)
 
 Sales_Data <- reactiveFileReader(60000, session = NULL
-                                 , filePath = '~/Documents/Sales_Data.rds', readRDS)
+                                 , filePath = 'Sales_Data.rds', readRDS)
 
 Payment_Data <- reactiveFileReader(60000, session = NULL
-                                 , filePath = '~/Documents/Payment_Data.rds', readRDS)
+                                 , filePath = 'Payment_Data.rds', readRDS)
 
 Expense_Data <- reactiveFileReader(60000, session = NULL
-                                 , filePath = '~/Documents/Expense_Data.rds', readRDS)
+                                 , filePath = 'Expense_Data.rds', readRDS)
 
 server <- function(input, output, session) {
 
@@ -90,7 +95,7 @@ output$ProfitPercent <- renderText({
 })
 
 output$ExpensePercent <- renderText({
-  paste(round((sum(shopData()$Expenses,na.rm=T)/sum(shopData()$Sale,na.rm=T))*100,2)," %")
+  paste(round((sum(shopData()$Expenses,na.rm=T)/sum(shopData()$Profit,na.rm=T))*100,2)," %")
 })
 
 output$StockWorth <- renderText({
@@ -99,6 +104,26 @@ output$StockWorth <- renderText({
     filter( Date >= input$daterange[1]
             & Date <= input$daterange[2] )
   paste("₹",format(round(sum(stocks$Worth,na.rm=T)), nsmall=0, big.mark=","))
+})
+
+output$NetSale <- renderText({
+  paste("₹",format(sum(shopData()$Sale,na.rm=T)-sum(shopData()$Profit,na.rm=T), big.mark=","))
+})
+
+output$EarnedMoney <- renderText({
+  paste("₹",format(sum(shopData()$Profit,na.rm=T)-sum(shopData()$Expenses,na.rm=T), big.mark=","))
+})
+
+output$PaymentPercentwithProfit <- renderText({
+  paste(round(sum(shopData()$Payment,na.rm=T)/((sum(shopData()$Sale,na.rm=T)-sum(shopData()$Profit,na.rm=T)) + (sum(shopData()$Profit,na.rm=T) - sum(shopData()$Expenses,na.rm=T)))*100,2),"%")
+})
+
+output$PaymentPercentwithoutProfit <- renderText({
+  paste(round(sum(shopData()$Payment,na.rm=T)/((sum(shopData()$Sale,na.rm=T)-sum(shopData()$Profit,na.rm=T)))*100,2),"%")
+})
+
+output$TotalDays <- renderText({
+  as.character(nrow(shopData()))
 })
 
 shop_Summary <- reactive({
@@ -111,13 +136,15 @@ shop_Summary <- reactive({
              Total_Profit = sum(Profit,na.rm=T),
              Total_Expense = sum(Expenses,na.rm=T),
              Total_Payment = sum(Payment,na.rm=T),
+             Net_Sale = Total_Sale - Total_Profit,
+             Earned_Money = Total_Profit - Total_Expense,
              Avg_Sale = round(mean(Sale,na.rm=T),2),
              Avg_Profit = round(mean(Profit,na.rm=T),2),
              Avg_Expense = round(mean(Expenses,na.rm=T),2),
              Avg_Payment = round(mean(Payment,na.rm=T),2),
              Profit_Percent = round((Total_Profit/Total_Sale),2),
-             Expense_Percent = round((Total_Expense/Total_Sale),2),
-             Payment_Percent = round((Total_Payment/Total_Sale),2),
+             Expense_Percent = round((Total_Expense/Total_Profit),2),
+             Payment_Percent = round((Total_Payment/Net_Sale),2),
              No_Sale_Days = sum(ifelse(Sale == 0, 1, 0),na.rm=T)
   )
 })
@@ -139,8 +166,8 @@ output$SummaryTable <- renderDataTable({
       , scrollX = TRUE
       , fixedColumns = list(leftColumns = 1)
     )
-  ) %>% formatCurrency(3:10,currency="₹ ") %>%
-    formatPercentage(11:13)
+  ) %>% formatCurrency(3:12,currency="₹ ") %>%
+    formatPercentage(13:15)
 })
 
 output$Overall_Trends_Plot <- renderDygraph({
