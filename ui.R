@@ -250,80 +250,6 @@ ui <- dashboardPage(
         )
       )
       ,tabItem(
-        tabName = "payments"
-        ,fluidRow(
-          box(
-            uiOutput('Payment_Dealers_List')
-            ,status = "warning"
-            ,collapsible = TRUE
-            ,width = 2
-          )
-        )
-        ,fluidRow(
-          tabBox(
-            tabPanel("Overall View"
-                     ,fluidRow(
-                       box(
-                         title = "Payments By Dealer"
-                         , collapsible = TRUE
-                         , dataTableOutput("PaymentTable")
-                         , width = 6
-                         , status = 'warning'
-                       )
-                       ,box(
-                         title = "Payment Distribution"
-                         , collapsible = TRUE
-                         , highchartOutput("Payment_distribution")
-                         , width = 6
-                         , status = 'warning'
-                       )
-                     )
-            )
-            ,tabPanel("Time View"
-                      ,fluidRow(
-                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
-                                ,selectInput('paymenttimeslice', 'Time View'
-                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
-                                             , selected = 'Week'))
-                            ,status = "warning"
-                            ,width = 2)
-                        ,valueBox(
-                          uiOutput("TotPayment")
-                          , "Total Payment"
-                          , color = "orange"
-                          , width = 3
-                        )
-                        ,valueBox(
-                          uiOutput("AvgPaymentMoney")
-                          , "Average Payment By Time"
-                          , color = "yellow"
-                          , width = 3
-                        )
-                      )
-                      ,fluidRow(
-                        box(
-                          title = "Payment Data"
-                          , collapsible = TRUE
-                          , dataTableOutput("Payment_Time_Table")
-                          , width = 6
-                          , status = 'warning'
-                        )
-                        ,box(
-                          title = "Payment Plot"
-                          , collapsible = TRUE
-                          , highchartOutput("Payment_Plot_Time")
-                          , width = 6
-                          , status = 'warning'
-                        )
-                      )
-                      , width = 12
-                      , status = "warning"
-            )
-            ,width = 12
-          )
-        )
-      )
-      ,tabItem(
         tabName = "ProfitAnalysis"
         ,fluidRow(
           box(
@@ -466,6 +392,89 @@ ui <- dashboardPage(
                       )
                       , width = 12
                       , status = "danger"
+            )
+            ,width = 12
+          )
+        )
+      )
+      ,tabItem(
+        tabName = "payments"
+        ,fluidRow(
+          box(
+            uiOutput('Payment_Dealers_List')
+            ,status = "warning"
+            ,collapsible = TRUE
+            ,width = 2
+          )
+        )
+        ,fluidRow(
+          tabBox(
+            tabPanel("Overall View"
+                     ,fluidRow(
+                       box(
+                         title = "Payments By Dealer"
+                         , collapsible = TRUE
+                         , dataTableOutput("PaymentTable")
+                         , width = 6
+                         , status = 'warning'
+                       )
+                       ,box(
+                         title = "Payment Distribution"
+                         , collapsible = TRUE
+                         , highchartOutput("Payment_distribution")
+                         , width = 6
+                         , status = 'warning'
+                       )
+                     )
+                     ,fluidRow(
+                       box(
+                         title = "Payment to stock"
+                         ,collapsible = TRUE
+                         ,dataTableOutput("Payment_Stock_Table")
+                         , width = 12
+                         , status = 'primary'
+                       )
+                     )
+            )
+            ,tabPanel("Time View"
+                      ,fluidRow(
+                        box(div(style="display:block;width: 100%;float: left;margin: 0 2px;"
+                                ,selectInput('paymenttimeslice', 'Time View'
+                                             , c('Day', 'Week', 'Month', 'Quarter', 'Year')
+                                             , selected = 'Week'))
+                            ,status = "warning"
+                            ,width = 2)
+                        ,valueBox(
+                          uiOutput("TotPayment")
+                          , "Total Payment"
+                          , color = "orange"
+                          , width = 3
+                        )
+                        ,valueBox(
+                          uiOutput("AvgPaymentMoney")
+                          , "Average Payment By Time"
+                          , color = "yellow"
+                          , width = 3
+                        )
+                      )
+                      ,fluidRow(
+                        box(
+                          title = "Payment Data"
+                          , collapsible = TRUE
+                          , dataTableOutput("Payment_Time_Table")
+                          , width = 6
+                          , status = 'warning'
+                        )
+                        ,box(
+                          title = "Payment Plot"
+                          , collapsible = TRUE
+                          , highchartOutput("Payment_Plot_Time")
+                          , width = 6
+                          , status = 'warning'
+                        )
+                      )
+                      , width = 12
+                      , status = "warning"
             )
             ,width = 12
           )

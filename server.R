@@ -850,4 +850,33 @@ output$Stock_Time_Table <- renderDataTable({
   # %>% formatPercentage(5,digits=2)
 })
 
+Payment_to_Stock <- reactive({
+  Payment_Summary() %>%
+    select(Dealer, Total_Payment) %>%
+    left_join(Stock_Summary()[,c("Dealer","Total_Stock_Price")],by="Dealer") %>%
+    mutate(Payment_ratio = round((Total_Stock_Price/Total_Payment),2),
+           Payment_Balance = Total_Stock_Price - Total_Payment) %>%
+    select(Dealer, Total_Stock_Price, Total_Payment, Payment_ratio, Payment_Balance)
+})
+
+output$Payment_Stock_Table <- renderDataTable({
+  datatable(
+    Payment_to_Stock() %>% arrange(desc(Total_Payment))
+    ,rownames=FALSE
+    ,filter = "top"
+    ,extensions = c("Buttons","FixedColumns")
+    , options = list(
+      dom = 'Bfrtip'
+      , buttons = c('pageLength', 'colvis', 'csv')
+      , lengthMenu = list(c(10, 15, 30, -1), c('10', '15', '30','All'))
+      , pageLength = 10
+      , searchHighlight = TRUE
+      , width="100%"
+      , scrollX = TRUE
+      , fixedColumns = list(leftColumns = 1)
+    )
+  ) %>% formatCurrency(c(2:3,5),currency="₹ ") %>%
+    formatPercentage(4,digits=2)
+})
+
 }
