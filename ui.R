@@ -1,7 +1,6 @@
 library(shinydashboard)
 library(shiny)
 library(DT)
-library(dygraphs)
 library(ggplot2)
 library(plotly)
 library(highcharter)
@@ -149,13 +148,13 @@ ui <- dashboardPage(
             tabBox(
               tabPanel("Overall Trends"
 
-                         , dygraphOutput("Overall_Trends_Plot")
+                         , highchartOutput("Overall_Trends_Plot")
                          , width = 12
                          , status = "primary"
 
               )
               ,tabPanel("Average Trends"
-                          , dygraphOutput("Average_Trends_Plot")
+                          , highchartOutput("Average_Trends_Plot")
                           , width = 12
                           , status = "primary"
               )

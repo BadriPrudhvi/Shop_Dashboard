@@ -4,10 +4,9 @@ library(dplyr)
 library(lubridate)
 library(highcharter)
 library(googlesheets)
-library(xts)
 library(ggplot2)
 library(plotly)
-library(dygraphs)
+library(tidyr)
 
 shopData <- gs_title("Shop_Sales") %>%  gs_read()
 Stock_Data <- gs_title("Stock_Data") %>%  gs_read()
@@ -170,26 +169,40 @@ output$SummaryTable <- renderDataTable({
     formatPercentage(13:15)
 })
 
-output$Overall_Trends_Plot <- renderDygraph({
+output$Overall_Trends_Plot <- renderHighchart({
+  
+  plot_data <- shop_Summary() %>%
+    select(Date,Total_Sale, Total_Profit, Total_Expense, Total_Payment) %>%
+    gather(Type,Rupees,2:5)
+  
   pdf(NULL)
-  g <- dygraph(xts(shop_Summary()[,3:6],order.by = shop_Summary()$Date)
-               ,ylab = "Rupees (₹)") %>% 
-       dyRangeSelector() %>%
-       dyHighlight(highlightSeriesOpts = list(strokeWidth = 4)) %>%
-       dyOptions(colors = c("blue","green", "red","orange"),strokeWidth = 2) %>%
-       dyLegend(width = 800)
+  
+    g = hchart(plot_data, "line", hcaes(x = Date, y = Rupees, group = Type)) %>%
+    hc_tooltip(crosshairs = TRUE, backgroundColor = "#FCFFC5",
+               shared = TRUE, borderWidth = 1, sort = FALSE) %>% 
+    hc_chart(zoomType = "xy") %>%
+    hc_colors(colors = c('red','orange','green','blue')) %>%
+    hc_plotOptions(series = list(marker = list(enabled = FALSE),
+                                 lineWidth = 3))
   dev.off()
   g
 })
 
-output$Average_Trends_Plot <- renderDygraph({
+output$Average_Trends_Plot <- renderHighchart({
+  
+  plot_data <- shop_Summary() %>%
+    select(Date,Avg_Sale, Avg_Profit, Avg_Expense, Avg_Payment) %>%
+    gather(Type,Rupees,2:5)
+  
   pdf(NULL)
-  g <- dygraph(xts(shop_Summary()[,7:10],order.by = shop_Summary()$Date)
-               ,ylab = "Rupees (₹)") %>% 
-    dyRangeSelector() %>%
-    dyHighlight(highlightSeriesOpts = list(strokeWidth = 4)) %>%
-    dyOptions(colors = c("blue","green", "red","orange"),strokeWidth = 2) %>%
-    dyLegend(width = 800)
+  
+  g = hchart(plot_data, "line", hcaes(x = Date, y = Rupees, group = Type)) %>%
+    hc_tooltip(crosshairs = TRUE, backgroundColor = "#FCFFC5",
+               shared = TRUE, borderWidth = 1, sort = FALSE) %>% 
+    hc_chart(zoomType = "xy") %>%
+    hc_colors(colors = c('red','orange','green','blue')) %>%
+    hc_plotOptions(series = list(marker = list(enabled = FALSE),
+                                 lineWidth = 3))
   dev.off()
   g
 })
